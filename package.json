@@ -1,0 +1,29 @@
+{
+  "name": "typeorm-study",
+  "version": "1.0.0",
+  "description": "TypeORM学习记录，TypeORM 是一个ORM（对象关系模型）框架，它可以运行在 NodeJS、Browser、Cordova、PhoneGap、Ionic、React Native、Expo 和 Electron 平台上，可以与 TypeScript 和 JavaScript (ES5,ES6,ES7,ES8)一起使用。和我们学习的mongoose类似的，就是不直接写sql操作数据库而是通过实体类，直接用类似JavaScript代码的代码操作数据库。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zangqingan/typeorm-study.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zangqingan/typeorm-study/issues"
+  },
+  "homepage": "https://github.com/zangqingan/typeorm-study#readme",
+  "dependencies": {
+    "@types/node": "^20.6.0",
+    "mysql2": "^3.6.0",
+    "reflect-metadata": "^0.1.13",
+    "ts-node": "^10.9.1",
+    "typeorm": "^0.3.17",
+    "typescript": "^5.2.2"
+  }
+}
