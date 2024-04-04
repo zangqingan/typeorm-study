@@ -3,6 +3,8 @@ import { AppDataSource } from "./data-source"
 // 引入实体类
 import { User } from "./entity/User"
 import { IdCard } from "./entity/IdCard"
+import { Department } from "./entity/Department"
+import { Employee } from "./entity/Employee"
 
 // 2. 调用实例方法 initialize() 初始化连接
 AppDataSource.initialize()
@@ -66,29 +68,62 @@ AppDataSource.initialize()
         // idCard.user = user;
         // await AppDataSource.manager.save(idCard);
 
-        // 查询-不指定关联关系查不出数据
-        const idc1 = await AppDataSource.manager.find(IdCard)
-        console.log('idc',idc1);
+        // // 查询-不指定关联关系查不出数据
+        // const idc1 = await AppDataSource.manager.find(IdCard)
+        // console.log('idc',idc1);
+        // // 关联查询
+        // const idc2 = await AppDataSource.manager.find(IdCard,{
+        //     relations:{
+        //         user:true
+        //     }
+        // })
+        // console.log('idc2',idc2);
+
+        // // 使用 query builder
+        // const idc3 = await AppDataSource.manager.createQueryBuilder(IdCard,'idc')
+        //     .leftJoinAndSelect('idc.user','user')
+        //     .getMany()
+        // console.log('idc3',idc3);
+
+        // const idc4 = await AppDataSource.manager.getRepository(IdCard)
+        //     .createQueryBuilder("idc")// 给IdCard仓库起别名为 'idc'
+        //     .leftJoinAndSelect("idc.user", "u")
+        //     .getMany();
+        // console.log('idc4',idc4);
+
+        // 一对多关系
+        // 查询
+        const deps = await AppDataSource.manager.find(Department);
+        console.log(deps);
+        const employees = await AppDataSource.manager.find(Employee);
+        console.log(employees);
+
         // 关联查询
-        const idc2 = await AppDataSource.manager.find(IdCard,{
+        const depsRelation = await AppDataSource.manager.find(Department,{
             relations:{
-                user:true
+                employees:true
             }
-        })
-        console.log('idc2',idc2);
+        });
+        console.log(depsRelation);
 
-        // 使用 query builder
-        const idc3 = await AppDataSource.manager.createQueryBuilder(IdCard,'idc')
-            .leftJoinAndSelect('idc.user','user')
-            .getMany()
-        console.log('idc3',idc3);
-
-        const idc4 = await AppDataSource.manager.getRepository(IdCard)
-            .createQueryBuilder("idc")// 给IdCard仓库起别名为 'idc'
-            .leftJoinAndSelect("idc.user", "u")
+        // query builder
+        const depsRelation2 = await AppDataSource.manager.createQueryBuilder(Department,'dep')
+            .leftJoinAndSelect('dep.employees','emp')
             .getMany();
-        console.log('idc4',idc4);
+        console.log(depsRelation2); 
+
+        const depsRelation3 = await AppDataSource.manager.getRepository(Department)
+            .createQueryBuilder("dep")
+            .leftJoinAndSelect("dep.employees", "emp")
+            .getMany();
+        console.log(depsRelation3); 
     
+        const employeesRelation = await AppDataSource.manager.find(Employee,{
+            relations:{
+                department:true
+            }
+        });
+        console.log(employeesRelation);
         
 
     })

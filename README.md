@@ -471,12 +471,137 @@ console.log(user);
 
 ```
 
-1. 一对多关系
+2. 一对多关系,在多的一方通过使用 @ManyToOne 装饰器,比一对一简单了不再需要 @JoinColumn 因为一对多的关系只可能是在多的那一方保存外键,不过一对多关系更多还是在一的那一方来保持关系,这是需要一个 @OneToMany  装饰器并同样要通过第二个参数指定外键列在 employee.department 维护。
 ```js
+// department.ts
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm"
+import { Employee } from "../Employee/index"
+
+@Entity()
+export class Department {
+
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({
+        length: 50
+    })
+    departmentName: string;
+
+    @OneToMany(type => Employee, employee => employee.department)
+    employees: Employee[];
+}
+// employee.ts
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
+// 引入部门实体
+import { Department } from "../Department"
+
+@Entity()
+export class Employee {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({
+        length: 50
+    })
+    employeeName: string;
+
+    // 声明一对多关系
+    @ManyToOne(type => Department)
+    department:Department
+}
+// 查询
+const deps = await AppDataSource.manager.find(Department);
+console.log(deps);
+// [
+//   Department { id: 1, departmentName: '技术部' },
+//   Department { id: 2, departmentName: '销售部' },
+//   Department { id: 3, departmentName: '行政部' }
+// ]
+const employees = await AppDataSource.manager.find(Employee);
+console.log(employees);
+// [
+//   Employee { id: 1, employeeName: '张三' },
+//   Employee { id: 2, employeeName: '李四' },
+//   Employee { id: 3, employeeName: '王五' }
+// ]
+// 关联查询
+const depsRelation = await AppDataSource.manager.find(Department,{
+   relations:{
+       employees:true
+   }
+});
+console.log(depsRelation);
+// [
+//   Department {
+//     id: 1,
+//     departmentName: '技术部',
+//     employees: [ [Employee], [Employee], [Employee] ]
+//   },
+//   Department { id: 2, departmentName: '销售部', employees: [] },
+//   Department { id: 3, departmentName: '行政部', employees: [] }
+// ]
+
+// query builder
+const depsRelation2 = await AppDataSource.manager.createQueryBuilder(Department,'dep')
+   .leftJoinAndSelect('dep.employees','emp')
+   .getMany();
+console.log(depsRelation2); 
+// [
+//   Department {
+//     id: 1,
+//     departmentName: '技术部',
+//     employees: [ [Employee], [Employee], [Employee] ]
+//   },
+//   Department { id: 2, departmentName: '销售部', employees: [] },
+//   Department { id: 3, departmentName: '行政部', employees: [] }
+// ]
+
+const depsRelation3 = await AppDataSource.manager.getRepository(Department)
+   .createQueryBuilder("dep")
+   .leftJoinAndSelect("dep.employees", "emp")
+   .getMany();
+console.log(depsRelation3); 
+// [
+//   Department {
+//     id: 1,
+//     departmentName: '技术部',
+//     employees: [ [Employee], [Employee], [Employee] ]
+//   },
+//   Department { id: 2, departmentName: '销售部', employees: [] },
+//   Department { id: 3, departmentName: '行政部', employees: [] }
+// ]
+
+// 从多的一方时能显示一的一方的数据的,因为它只有一条.
+const employeesRelation = await AppDataSource.manager.find(Employee,{
+   relations:{
+       department:true
+   }
+});
+console.log(employeesRelation);
+// [
+//   Employee {
+//     id: 1,
+//     employeeName: '张三',
+//     department: Department { id: 1, departmentName: '技术部' }
+//   },
+//   Employee {
+//     id: 2,
+//     employeeName: '李四',
+//     department: Department { id: 1, departmentName: '技术部' }
+//   },
+//   Employee {
+//     id: 3,
+//     employeeName: '王五',
+//     department: Department { id: 1, departmentName: '技术部' }
+//   }
+// ]
+
+
 
 ```
 
-3. 多对多关系
+1. 多对多关系
 ```js
 
 ```

@@ -6,6 +6,8 @@ import { DataSource } from "typeorm";
 import { User } from "./entity/User";
 import { IdCard } from "./entity/IdCard";
 import { Photo } from "./entity/Photo";
+import { Department } from "./entity/Department";
+import { Employee } from "./entity/Employee";
 
 // 2. 创建一个数据源实例并导出
 export const AppDataSource = new DataSource({
@@ -17,7 +19,7 @@ export const AppDataSource = new DataSource({
     database: "typeorm-study", // 数据库名
     synchronize: true,// 同步建表，也就是当 database 里没有和 Entity 对应的表的时候，会自动生成建表 sql 语句并执行。
     logging: true,// 打印生成的 sql 语句
-    entities: [User,IdCard,Photo],// 指定有哪些和数据库的表对应的 Entity。
+    entities: [User,IdCard,Photo,Department,Employee],// 指定有哪些和数据库的表对应的 Entity。
     migrations: [],
     subscribers: [],
     connectorPackage: 'mysql2',// 指定用什么驱动包
