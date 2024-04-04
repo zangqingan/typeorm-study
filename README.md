@@ -597,12 +597,180 @@ console.log(employeesRelation);
 //   }
 // ]
 
-
-
 ```
 
-1. 多对多关系
+3. 多对多关系,需要一个中间表实现,相当于把多对多拆成了两个一对多,通过 @ManyToMany 装饰器关联,@JoinTable指定中间表名字,另一边需要也是一样的增加一个 @ManyToMany 的映射属性,并且都需要传入第二个属性指明是那个实体的属性,因为外键是存在中间表的
 ```js
+import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from "typeorm"
+import { Tag } from "../Tag";
+
+@Entity()
+export class Article {
+
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({
+        length: 100,
+        comment: '文章标题'
+    })
+    title: string;
+
+    @Column({
+        type: 'text',
+        comment: '文章内容'
+    })
+    content: string;
+
+    // @JoinTable 指定中间表,可以传入一个配置对象声明@JoinTable({ name: 'article_tag' })
+    // @ManyToMany 声明多对多关系
+    @JoinTable()
+    @ManyToMany(() => Tag,tag => tag.articles)
+    tags: Tag[];
+}
+
+import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from "typeorm"
+import { Article } from "../Article"
+
+@Entity()
+export class Tag {
+
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({
+        length: 100
+    })
+    name: string;
+
+    @ManyToMany(type => Article, article => article.tags)
+    articles: Article[];
+}
+// 初始化数据
+const a1 = new Article();
+a1.title = '深空彼岸';
+a1.content = '是否接受甲方为';
+
+const a2 = new Article();
+a2.title = '雷阵雨';
+a2.content = '是个家里睡觉了估计';
+
+const t1 = new Tag();
+t1.name = '天气';
+
+const t2 = new Tag();
+t2.name = '生活';
+
+const t3 = new Tag();
+t3.name = '小说';
+
+a1.tags = [t1,t2];
+a2.tags = [t1,t2,t3];
+
+const entityManager = AppDataSource.manager;
+
+await entityManager.save(t1);
+await entityManager.save(t2);
+await entityManager.save(t3);
+
+await entityManager.save(a1);
+await entityManager.save(a2);
+
+// 查询
+const article1 = await AppDataSource.manager.find(Article);
+console.log(article1);
+// [
+//   Article { id: 1, title: '深空彼岸', content: '是否接受甲方为' },
+//   Article { id: 2, title: '雷阵雨', content: '是个家里睡觉了估计' }
+// ]
+
+const article2 = await AppDataSource.manager.find(Article, {
+   relations: {
+       tags: true
+   }
+});
+console.log(article2);
+// [
+//   Article {
+//     id: 1,
+//     title: '深空彼岸',
+//     content: '是否接受甲方为',
+//     tags: [ [Tag], [Tag] ]
+//   },
+//   Article {
+//     id: 2,
+//     title: '雷阵雨',
+//     content: '是个家里睡觉了估计',
+//     tags: [ [Tag], [Tag], [Tag] ]
+//   }
+// ]
+
+
+const tags1 = await AppDataSource.manager.find(Tag);
+console.log(tags1);
+// [
+//   Tag { id: 1, name: '天气' },
+//   Tag { id: 2, name: '生活' },
+//   Tag { id: 3, name: '小说' }
+// ]
+
+const tags2 = await AppDataSource.manager.find(Tag, {
+   relations: {
+       articles: true
+   }
+});
+console.log(tags2);
+// [
+//   Tag { id: 1, name: '天气', articles: [ [Article], [Article] ] },
+//   Tag { id: 2, name: '生活', articles: [ [Article], [Article] ] },
+//   Tag { id: 3, name: '小说', articles: [ [Article] ] }
+// ]
+
+
+// query builder
+const article3 = await AppDataSource.manager.createQueryBuilder(Article, 'article')
+   .leftJoinAndSelect('article.tags', 'tag')
+   .getMany();
+console.log(article3);
+// [
+//   Article {
+//     id: 1,
+//     title: '深空彼岸',
+//     content: '是否接受甲方为',
+//     tags: [ [Tag], [Tag] ]
+//   },
+//   Article {
+//     id: 2,
+//     title: '雷阵雨',
+//     content: '是个家里睡觉了估计',
+//     tags: [ [Tag], [Tag], [Tag] ]
+//   }
+// ]
+
+const tags3 = await AppDataSource.manager.createQueryBuilder(Tag, 'tag')
+   .leftJoinAndSelect('tag.articles', 'article')
+   .getMany();
+console.log(tags3);
+// [
+//   Tag { id: 1, name: '天气', articles: [ [Article], [Article] ] },
+//   Tag { id: 2, name: '生活', articles: [ [Article], [Article] ] },
+//   Tag { id: 3, name: '小说', articles: [ [Article] ] }
+// ]
+
+
+const article4 = await AppDataSource.manager.getRepository(Article)
+   .createQueryBuilder("article")
+   .leftJoinAndSelect("article.tags", "tag")
+   .getMany();
+console.log(article4);
+const tags4 = await AppDataSource.manager.getRepository(Tag)
+   .createQueryBuilder("tag")
+   .leftJoinAndSelect("tag.articles", "article")
+   .getMany();
+console.log(tags4);
+
+
+
 
 ```
 

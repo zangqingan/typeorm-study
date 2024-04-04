@@ -5,6 +5,8 @@ import { User } from "./entity/User"
 import { IdCard } from "./entity/IdCard"
 import { Department } from "./entity/Department"
 import { Employee } from "./entity/Employee"
+import { Tag } from "./entity/Tag"
+import { Article } from "./entity/Article"
 
 // 2. 调用实例方法 initialize() 初始化连接
 AppDataSource.initialize()
@@ -93,37 +95,109 @@ AppDataSource.initialize()
 
         // 一对多关系
         // 查询
-        const deps = await AppDataSource.manager.find(Department);
-        console.log(deps);
-        const employees = await AppDataSource.manager.find(Employee);
-        console.log(employees);
+        // const deps = await AppDataSource.manager.find(Department);
+        // console.log(deps);
+        // const employees = await AppDataSource.manager.find(Employee);
+        // console.log(employees);
 
-        // 关联查询
-        const depsRelation = await AppDataSource.manager.find(Department,{
-            relations:{
-                employees:true
+        // // 关联查询
+        // const depsRelation = await AppDataSource.manager.find(Department,{
+        //     relations:{
+        //         employees:true
+        //     }
+        // });
+        // console.log(depsRelation);
+
+        // // query builder
+        // const depsRelation2 = await AppDataSource.manager.createQueryBuilder(Department,'dep')
+        //     .leftJoinAndSelect('dep.employees','emp')
+        //     .getMany();
+        // console.log(depsRelation2); 
+
+        // const depsRelation3 = await AppDataSource.manager.getRepository(Department)
+        //     .createQueryBuilder("dep")
+        //     .leftJoinAndSelect("dep.employees", "emp")
+        //     .getMany();
+        // console.log(depsRelation3); 
+    
+        // const employeesRelation = await AppDataSource.manager.find(Employee,{
+        //     relations:{
+        //         department:true
+        //     }
+        // });
+        // console.log(employeesRelation);
+
+        // 多对多关系
+        // const a1 = new Article();
+        // a1.title = '深空彼岸';
+        // a1.content = '是否接受甲方为';
+    
+        // const a2 = new Article();
+        // a2.title = '雷阵雨';
+        // a2.content = '是个家里睡觉了估计';
+    
+        // const t1 = new Tag();
+        // t1.name = '天气';
+    
+        // const t2 = new Tag();
+        // t2.name = '生活';
+    
+        // const t3 = new Tag();
+        // t3.name = '小说';
+    
+        // a1.tags = [t1,t2];
+        // a2.tags = [t1,t2,t3];
+    
+        // const entityManager = AppDataSource.manager;
+    
+        // await entityManager.save(t1);
+        // await entityManager.save(t2);
+        // await entityManager.save(t3);
+    
+        // await entityManager.save(a1);
+        // await entityManager.save(a2);
+
+        // 查询
+        const article1 = await AppDataSource.manager.find(Article);
+        console.log(article1);
+        const article2 = await AppDataSource.manager.find(Article, {
+            relations: {
+                tags: true
             }
         });
-        console.log(depsRelation);
+        console.log(article2);
+
+        const tags1 = await AppDataSource.manager.find(Tag);
+        console.log(tags1);
+        const tags2 = await AppDataSource.manager.find(Tag, {
+            relations: {
+                articles: true
+            }
+        });
+        console.log(tags2);
 
         // query builder
-        const depsRelation2 = await AppDataSource.manager.createQueryBuilder(Department,'dep')
-            .leftJoinAndSelect('dep.employees','emp')
+        const article3 = await AppDataSource.manager.createQueryBuilder(Article, 'article')
+            .leftJoinAndSelect('article.tags', 'tag')
             .getMany();
-        console.log(depsRelation2); 
+        console.log(article3);
+        const tags3 = await AppDataSource.manager.createQueryBuilder(Tag, 'tag')
+            .leftJoinAndSelect('tag.articles', 'article')
+            .getMany();
+        console.log(tags3);
 
-        const depsRelation3 = await AppDataSource.manager.getRepository(Department)
-            .createQueryBuilder("dep")
-            .leftJoinAndSelect("dep.employees", "emp")
+        const article4 = await AppDataSource.manager.getRepository(Article)
+            .createQueryBuilder("article")
+            .leftJoinAndSelect("article.tags", "tag")
             .getMany();
-        console.log(depsRelation3); 
-    
-        const employeesRelation = await AppDataSource.manager.find(Employee,{
-            relations:{
-                department:true
-            }
-        });
-        console.log(employeesRelation);
+        console.log(article4);
+        const tags4 = await AppDataSource.manager.getRepository(Tag)
+            .createQueryBuilder("tag")
+            .leftJoinAndSelect("tag.articles", "article")
+            .getMany();
+        console.log(tags4);
+
+        
         
 
     })
