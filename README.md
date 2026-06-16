@@ -279,7 +279,6 @@ export async function crudUser () {
 | `count()`              | 统计记录数                               | `repo.count({ where: { status: "published" } })`                   |
 | `createQueryBuilder()` | 返回 QueryBuilder（进入灵活模式）        | `repo.createQueryBuilder("user")`                                  |
 
-
 ```ts
 // 通过数据源实例获取 QueryBuilder
 const queryBuilder = AppDataSource.createQueryBuilder("user")
@@ -367,6 +366,7 @@ await repo.createQueryBuilder()
 TypeORM 里一对一关系的映射通过 @OneToOne 装饰器来声明，维持外键列的 Entity 实体添加 @JoinColumn 装饰器。如果是非外键列的 Entity，想要关联查询另一个 Entity，则需要通过第二个参数指定外键列是另一个 Entity 的哪个属性。
 
 **这里以用户和身份证表为例**
+
 ```ts
 // user.ts
 // 1. 引入需要的装饰器
@@ -826,7 +826,103 @@ console.log(tags4);
 
 ```
 
-# 四、集成到nestjs
+# 四、迁移 migrations
+
+## 4.1 概述
+
+在我们学习时基于 TypeORM 操作数据库都是开启了 synchronize，只要创建或者修改了 Entity，那就会自动创建表和修改表结构。但是在生产环境下，用 synchronize 很危险，很容易丢数据。
+
+迁移就只是一个带有 SQL 查询的文件，用于更新数据库架构并将新更改应用于现有数据库。TypeORM 提供了一个可以编写此类 SQL 查询并在需要时运行它们的位置。这个位置就叫"migrations"。
+
+迁移是 数据库结构版本管理 的工具，它可以：
+
+1. 跟踪实体定义与数据库表结构的差异
+2. 生成可执行的 SQL 脚本，安全地更新表结构（增加列、修改类型、创建索引等）
+3. 实现版本化控制，支持升级/回滚
+4. 禁止在生产环境使用 synchronize: true，迁移是其替代方案
+
+以下命令均需在项目中配合 `-d ./data-source.ts` 参数使用（或通过 `package.json` 脚本封装）。
+
+* migration:create：生成空白 migration 文件
+* migration:generate：连接数据库，根据 Entity 和数据库表的差异，生成 migration 文件
+* migration:run：执行 migration，会根据数据库 migrations 表的记录来确定执行哪个(会生成migrations表)
+* migration:revert：撤销上次 migration，删掉数据库 migrations 里的上次执行记录
+
+| 命令                   | 作用                                                                         | 示例                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `migration:create`   | 创建一个**空白**迁移文件（手动编写 SQL）                               | `typeorm migration:create ./src/migrations/ManualMigration`                    |
+| `migration:generate` | **自动比较**实体与数据库的差异，生成包含 `up`/`down`SQL 的迁移文件 | `typeorm migration:generate -d ./data-source.ts ./src/migrations/AddAgeColumn` |
+| `migration:run`      | 执行所有**尚未运行**的迁移（按文件名顺序）                             | `typeorm migration:run -d ./data-source.ts`                                    |
+| `migration:revert`   | 回滚**最后一次**执行的迁移（调用其 `down`方法）                      | `typeorm migration:revert -d ./data-source.ts`                                 |
+| `migration:show`     | 列出所有迁移及其状态（是否已执行）                                           | `typeorm migration:show -d ./data-source.ts`                                   |
+
+**创建新的迁移文件**
+
+```ts
+// 1.初始化项目与配置数据源
+// data-source.ts
+import { DataSource } from "typeorm";
+import { User } from "./entities/User";
+
+export const AppDataSource = new DataSource({
+  type: "mysql",
+  host: "localhost",
+  port: 3306,
+  username: "root",
+  password: "password",
+  database: "test",
+  logging: true,
+  entities: [User],            // 实体路径
+  synchronize: false,          // 重要：生产必须 false
+  migrations: ["src/migrations/*.ts"],   // 迁移文件输出目录
+  migrationsTableName: "migrations",     // 记录迁移历史的表名
+});
+
+// 在 package.json 中添加脚本
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node src/index.ts",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:create": "typeorm-ts-node-commonjs migration:create src/migrations/init",
+    "migration:generate": "typeorm-ts-node-commonjs migration:generate src/migrations/GenerateMigration -d ./src/data-source.ts",
+    "migration:run": "typeorm-ts-node-commonjs migration:run -d ./src/data-source.ts",
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d ./src/data-source.ts"
+
+  },
+
+// 迁移文件
+import { MigrationInterface, QueryRunner } from "typeorm"
+
+export class Init.ts1781514434783 implements MigrationInterface {
+    // up必须包含执行迁移所需的代码
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "post" ALTER COLUMN "title" RENAME TO "name"`);
+    }
+    // down必须恢复任何up改变，用来回滚迁移文件
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "post" ALTER COLUMN "name" RENAME TO "title"`); // 恢复"up"方法所做的事情
+    }
+    // 在up和down里面有一个QueryRunner对象。使用此对象执行所有数据库操作。
+
+}
+
+
+```
+
+## 4.2 nestjs中使用
+
+1. 创建 data-source.ts 供 migration 用
+2. 把 synchronize 关掉
+3. 用 migration:generate 生成创建表的 migration
+4. 用 migration:run 执行，会根据数据库 migrations 表的记录来确定执行哪个
+5. 用 migration:create 创建 migration，然后填入数据库导出的 sql 里的 insert into 语句
+6. 用 migration:run 执行
+7. 用 migration:generate 生成修改表的 migration
+8. 用 migration:run 执行
+9. 如果需要用 migration:revert 撤销上次 migration
+
+# 五、集成到nestjs
+
 根据typeorm包的使用方法，在nestjs中使用不过是把 TypeORM 的 api 封装一层，做成一个 TypeOrmModule 使用而已。
 
 我们可以通过定义一个异步提供者，用于实例化 TypeORM 数据源对象。
@@ -834,7 +930,6 @@ console.log(tags4);
 然后使用仓库模式使用具体的typeorm实体。所以可以再创建一个 Repository 提供者：
 
 而这些功能都由 @nestjs/typeorm 包提供。
-
 
 ```ts
 import { DataSource } from 'typeorm';
@@ -892,4 +987,3 @@ export class PhotoService {
 }
 
 ```
-
